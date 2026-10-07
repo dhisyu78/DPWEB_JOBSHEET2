@@ -2,6 +2,7 @@
 session_start();
 require __DIR__ . '/../includes/koneksi.php';
 
+$id = $_POST['id'] ?? null;
 $judul = trim($_POST['judul'] ?? '');
 $pengarang = trim($_POST['pengarang'] ?? '');
 $tahun = $_POST['tahun'] ?? '';
@@ -9,8 +10,11 @@ $isbn = trim($_POST['isbn'] ?? '');
 $stok = $_POST['stok'] ?? '';
 $kategori = trim($_POST['kategori'] ?? '');
 
-// Validasi server-side — wajib ada meski sudah divalidasi JS di Jobsheet 5,
-// karena validasi client bisa dilewati (nonaktifkan JS / kirim request manual).
+if (!$id) {
+    header('Location: list.php');
+    exit;
+}
+
 $errors = [];
 if ($judul === '') {
     $errors[] = "Judul wajib diisi.";
@@ -27,14 +31,13 @@ if (!is_numeric($stok) || $stok < 0) {
 
 if (!empty($errors)) {
     $_SESSION['flash'] = ['type' => 'error', 'pesan' => implode(' ', $errors)];
-    header('Location: tambah.php');
+    header('Location: edit.php?id=' . urlencode($id));
     exit;
 }
 
 $stmt = $pdo->prepare(
-    "INSERT INTO buku (judul, pengarang, tahun, isbn, stok, kategori)
-     VALUES (:judul, :pengarang, :tahun, :isbn, :stok, :kategori)
-     RETURNING id"
+    "UPDATE buku SET judul = :judul, pengarang = :pengarang, tahun = :tahun,
+     isbn = :isbn, stok = :stok, kategori = :kategori WHERE id = :id"
 );
 $stmt->execute([
     'judul' => $judul,
@@ -43,8 +46,9 @@ $stmt->execute([
     'isbn' => $isbn,
     'stok' => (int) $stok,
     'kategori' => $kategori,
+    'id' => $id,
 ]);
 
-$_SESSION['flash'] = ['type' => 'success', 'pesan' => 'Buku berhasil ditambahkan.'];
+$_SESSION['flash'] = ['type' => 'success', 'pesan' => 'Buku berhasil diperbarui.'];
 header('Location: list.php');
 exit;
